@@ -1,8 +1,5 @@
 {
 	"extends": "bamboo",
-	"rules": {
-		"no-throw-literal": 0
-	},
 	"parserOptions": {
 		"project": "./tsconfig.json"
 	}

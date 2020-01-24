@@ -1,4 +1,4 @@
-import { readInt16BE, readInt32BE } from './utils';
+import { readInt16BE, readInt32BE } from '../utils/Util';
 import { TextDecoder } from 'util';
 
 export class PacketReader {
@@ -6,7 +6,7 @@ export class PacketReader {
 	private offset = 0;
 	private decoder: TextDecoder = new TextDecoder();
 
-	public constructor(private buffer: Uint8Array) {}
+	public constructor(private buffer: Uint8Array) { }
 
 	public readInt16(): number {
 		const value = readInt16BE(this.buffer, this.offset);

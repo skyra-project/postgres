@@ -1,6 +1,7 @@
 import { Oid } from './oid';
-import { Column, Format } from './connection';
 import { TextDecoder } from 'util';
+import { Format } from '../connection/Connection';
+import { Column } from '../connection/Column';
 
 // Datetime parsing based on:
 // https://github.com/bendrucker/postgres-date/blob/master/index.js
@@ -154,10 +155,7 @@ function decodeByteaEscape(byteaStr: string): Uint8Array {
 			i += 4;
 		} else {
 			let backslashes = 1;
-			while (
-				i + backslashes < byteaStr.length
-          && byteaStr[i + backslashes] === '\\'
-			) {
+			while (i + backslashes < byteaStr.length && byteaStr[i + backslashes] === '\\') {
 				backslashes++;
 			}
 			for (let k = 0; k < Math.floor(backslashes / 2); ++k) {

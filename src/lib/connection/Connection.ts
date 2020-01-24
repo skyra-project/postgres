@@ -25,14 +25,17 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { PacketWriter } from './packet_writer';
-import { hashMd5Password, readUInt32BE } from './utils';
-import { PacketReader } from './packet_reader';
-import { QueryConfig, QueryResult, Query } from './query';
-import { parseError } from './error';
-import { ConnectionParams } from './connection_params';
+import { PacketWriter } from '../packets/PacketWriter';
+import { hashMd5Password, readUInt32BE } from '../utils/Util';
+import { QueryConfig, Query } from '../queries/Query';
+import { QueryResult } from '../queries/QueryResult';
+import { parseError } from '../utils/Error';
+import { ConnectionParams } from './ConnectionParameters';
 import { TextDecoder, TextEncoder } from 'util';
 import { Socket } from 'net';
+import { Message } from './Message';
+import { Column } from './Column';
+import { RowDescription } from './RowDescription';
 
 export enum Format {
 	TEXT = 0,
@@ -43,36 +46,6 @@ enum TransactionStatus {
 	Idle = 'I',
 	IdleInTransaction = 'T',
 	InFailedTransaction = 'E'
-}
-
-export class Message {
-
-	public reader: PacketReader;
-
-	public constructor(public type: string, public byteCount: number, public body: Uint8Array) {
-		this.reader = new PacketReader(body);
-	}
-
-}
-
-export class Column {
-
-	public constructor(
-		public name: string,
-		public tableOid: number,
-		public index: number,
-		public typeOid: number,
-		public columnLength: number,
-		public typeModifier: number,
-		public format: Format
-	) {}
-
-}
-
-export class RowDescription {
-
-	public constructor(public columnCount: number, public columns: Column[]) {}
-
 }
 
 export class Connection {
@@ -90,7 +63,7 @@ export class Connection {
 	private _secretKey!: number;
 	private _parameters: { [key: string]: string } = {};
 
-	public constructor(private connParams: ConnectionParams) {}
+	public constructor(private connParams: ConnectionParams) { }
 
 	/** Read single message sent by backend */
 	public async readMessage(): Promise<Message> {
@@ -128,11 +101,11 @@ export class Connection {
 				case 'K':
 					this._processBackendKeyData(msg);
 					break;
-					// parameter status
+				// parameter status
 				case 'S':
 					this._processParameterStatus(msg);
 					break;
-					// ready for query
+				// ready for query
 				case 'Z':
 					this._processReadyForQuery(msg);
 					return;
@@ -275,10 +248,10 @@ export class Connection {
 			case 'T':
 				result.handleRowDescription(this._processRowDescription(msg));
 				break;
-				// no data
+			// no data
 			case 'n':
 				break;
-				// error
+			// error
 			case 'E':
 				await this._processError(msg);
 				break;
@@ -294,11 +267,11 @@ export class Connection {
 					// this is actually packet read
 					result.handleDataRow(this._readDataRow(msg));
 					break;
-					// command complete
+				// command complete
 				case 'C':
 					result.done();
 					break outerLoop;
-					// error response
+				// error response
 				case 'E':
 					await this._processError(msg);
 					break;
@@ -358,9 +331,9 @@ export class Connection {
 		const columns = [];
 
 		for (let i = 0; i < columnCount; i++) {
-		  // TODO: if one of columns has 'format' == 'binary',
-		  //  all of them will be in same format?
-		  const column = new Column(
+			// TODO: if one of columns has 'format' == 'binary',
+			//  all of them will be in same format?
+			const column = new Column(
 				msg.reader.readCString(), // name
 				msg.reader.readInt32(), // tableOid
 				msg.reader.readInt16(), // index
@@ -368,122 +341,122 @@ export class Connection {
 				msg.reader.readInt16(), // column
 				msg.reader.readInt32(), // typeModifier
 				msg.reader.readInt16() // format
-		  );
-		  columns.push(column);
+			);
+			columns.push(column);
 		}
 
 		return new RowDescription(columnCount, columns);
-	  }
+	}
 
-	  private async _readParseComplete() {
+	private async _readParseComplete() {
 		const msg = await this.readMessage();
 
 		switch (msg.type) {
-		  // parse completed
-		  case '1':
-			// TODO: add to already parsed queries if
-			// query has name, so it's not parsed again
+			// parse completed
+			case '1':
+				// TODO: add to already parsed queries if
+				// query has name, so it's not parsed again
 				break;
-		  // error response
-		  case 'E':
+			// error response
+			case 'E':
 				await this._processError(msg);
 				break;
-		  default:
+			default:
 				throw new Error(`Unexpected frame: ${msg.type}`);
 		}
-	  }
+	}
 
-	  private async _readBindComplete() {
+	private async _readBindComplete() {
 		const msg = await this.readMessage();
 
 		switch (msg.type) {
-		  // bind completed
-		  case '2':
-			// no-op
+			// bind completed
+			case '2':
+				// no-op
 				break;
-		  // error response
-		  case 'E':
+			// error response
+			case 'E':
 				await this._processError(msg);
 				break;
-		  default:
+			default:
 				throw new Error(`Unexpected frame: ${msg.type}`);
 		}
-	  }
+	}
 
-	  private async _readAuthResponse() {
+	private async _readAuthResponse() {
 		const msg = await this.readMessage();
 
 		if (msg.type === 'E') {
-		  throw parseError(msg);
+			throw parseError(msg);
 		} else if (msg.type !== 'R') {
-		  throw new Error(`Unexpected auth response: ${msg.type}.`);
+			throw new Error(`Unexpected auth response: ${msg.type}.`);
 		}
 
 		const responseCode = msg.reader.readInt32();
 		if (responseCode !== 0) {
-		  throw new Error(`Unexpected auth response code: ${responseCode}.`);
+			throw new Error(`Unexpected auth response code: ${responseCode}.`);
 		}
-	  }
+	}
 
-	  private async _authCleartext() {
+	private async _authCleartext() {
 		this.packetWriter.clear();
 		const password = this.connParams.password || '';
 		const buffer = this.packetWriter.addCString(password).flush(0x70);
 
 		await this.bufWriter.write(buffer);
 		await this.bufWriter.flush();
-	  }
+	}
 
-	  private async _authMd5(salt: Uint8Array) {
+	private async _authMd5(salt: Uint8Array) {
 		this.packetWriter.clear();
 
 		if (!this.connParams.password) {
-		  throw new Error('Auth Error: attempting MD5 auth with password unset');
+			throw new Error('Auth Error: attempting MD5 auth with password unset');
 		}
 
 		const password = hashMd5Password(
-		  this.connParams.password,
-		  this.connParams.user,
-		  salt
+			this.connParams.password,
+			this.connParams.user,
+			salt
 		);
 		const buffer = this.packetWriter.addCString(password).flush(0x70);
 
 		await this.bufWriter.write(buffer);
 		await this.bufWriter.flush();
-	  }
+	}
 
-	  private _processBackendKeyData(msg: Message) {
+	private _processBackendKeyData(msg: Message) {
 		this._pid = msg.reader.readInt32();
 		this._secretKey = msg.reader.readInt32();
 		return this._pid & this._secretKey;
-	  }
+	}
 
-	  private _processParameterStatus(msg: Message) {
+	private _processParameterStatus(msg: Message) {
 		// TODO: should we save all parameters?
 		const key = msg.reader.readCString();
 		const value = msg.reader.readCString();
 		this._parameters[key] = value;
-	  }
+	}
 
-	  private _processReadyForQuery(msg: Message) {
+	private _processReadyForQuery(msg: Message) {
 		const txStatus = msg.reader.readByte();
 		this._transactionStatus = String.fromCharCode(txStatus) as TransactionStatus;
 		return this._transactionStatus;
-	  }
+	}
 
-	  private async _readReadyForQuery() {
+	private async _readReadyForQuery() {
 		const msg = await this.readMessage();
 
 		if (msg.type !== 'Z') {
-		  throw new Error(
+			throw new Error(
 				`Unexpected message type: ${msg.type}, expected "Z" (ReadyForQuery)`
-		  );
+			);
 		}
 
 		this._processReadyForQuery(msg);
-	  }
+	}
 
-	  private async _simpleQuery(query: Query): Promise<QueryResult> {
+	private async _simpleQuery(query: Query): Promise<QueryResult> {
 		this.packetWriter.clear();
 
 		const buffer = this.packetWriter.addCString(query.text).flush(0x51);
@@ -498,69 +471,67 @@ export class Connection {
 		msg = await this.readMessage();
 
 		switch (msg.type) {
-		  // row description
-		  case 'T':
+			// row description
+			case 'T':
 				result.handleRowDescription(this._processRowDescription(msg));
 				break;
-		  // no data
-		  case 'n':
+			// no data
+			case 'n':
 				break;
-		  // error response
-		  case 'E':
+			// error response
+			case 'E':
 				await this._processError(msg);
 				break;
-		  // notice response
-		  case 'N':
-			// TODO:
+			// notice response
+			case 'N':
+				// TODO:
 				console.log('TODO: handle notice');
 				break;
-		  // command complete
-		  // TODO: this is duplicated in next loop
-		  case 'C':
+			// command complete
+			// TODO: this is duplicated in next loop
+			case 'C':
 				result.done();
 				break;
-		  default:
+			default:
 				throw new Error(`Unexpected frame: ${msg.type}`);
 		}
 
 		while (true) {
-		  msg = await this.readMessage();
-		  switch (msg.type) {
-			// data row
+			msg = await this.readMessage();
+			switch (msg.type) {
+				// data row
 				case 'D':
-			  // this is actually packet read
-			  result.handleDataRow(this._readDataRow(msg));
-			  break;
-					// command complete
+					// this is actually packet read
+					result.handleDataRow(this._readDataRow(msg));
+					break;
+				// command complete
 				case 'C':
-			  result.done();
-			  break;
-					// ready for query
+					result.done();
+					break;
+				// ready for query
 				case 'Z':
-			  this._processReadyForQuery(msg);
-			  return result;
-					// error response
+					this._processReadyForQuery(msg);
+					return result;
+				// error response
 				case 'E':
-			  await this._processError(msg);
-			  break;
+					await this._processError(msg);
+					break;
 				default:
-			  throw new Error(`Unexpected frame: ${msg.type}`);
-		  }
+					throw new Error(`Unexpected frame: ${msg.type}`);
+			}
 		}
-	  }
+	}
 
-	  private async _sendStartupMessage() {
+	private async _sendStartupMessage() {
 		const writer = this.packetWriter;
 		writer.clear();
 		// protocol version - 3.0, written as
 		writer.addInt16(3).addInt16(0);
 		const { connParams } = this;
 		// TODO: recognize other parameters
-		(['user', 'database', 'application_name'] as Array<
-		  keyof ConnectionParams
-		>).forEach(key => {
-		  const val = connParams[key];
-		  writer.addCString(key).addCString(val);
+		(['user', 'database', 'application_name'] as (keyof ConnectionParams)[]).forEach(key => {
+			const val = connParams[key];
+			writer.addCString(key).addCString(val);
 		});
 
 		// eplicitly set utf-8 encoding
@@ -574,11 +545,11 @@ export class Connection {
 		writer.clear();
 
 		const finalBuffer = writer
-		  .addInt32(bodyLength)
-		  .add(bodyBuffer)
-		  .join();
+			.addInt32(bodyLength)
+			.add(bodyBuffer)
+			.join();
 
 		await this.bufWriter.write(finalBuffer);
-	  }
+	}
 
 }

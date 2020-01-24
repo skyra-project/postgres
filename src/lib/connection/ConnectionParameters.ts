@@ -1,9 +1,10 @@
-import { parseDsn } from './utils';
+import { parseDsn } from '../utils/Util';
+import { ConnectionParamsError } from '../utils/Error';
 
 const DEFAULT_CONNECTION_PARAMS = {
 	host: '127.0.0.1',
 	port: '5432',
-	application_name: 'skyra_postgres'
+	application_name: 'postgres'
 };
 
 function getPgEnv(): IConnectionParams {
@@ -18,8 +19,7 @@ function getPgEnv(): IConnectionParams {
 	};
 }
 
-function selectFrom(sources: Array<IConnectionParams>,
-	key: keyof IConnectionParams): string | undefined {
+function selectFrom(sources: readonly IConnectionParams[], key: keyof IConnectionParams): string | undefined {
 	for (const source of sources) {
 		if (source[key]) return source[key];
 	}
@@ -27,7 +27,7 @@ function selectFrom(sources: Array<IConnectionParams>,
 	return undefined;
 }
 
-function selectFromWithDefault(sources: Array<IConnectionParams>, key: keyof typeof DEFAULT_CONNECTION_PARAMS): string {
+function selectFromWithDefault(sources: readonly IConnectionParams[], key: keyof typeof DEFAULT_CONNECTION_PARAMS): string {
 	return selectFrom(sources, key) || DEFAULT_CONNECTION_PARAMS[key];
 }
 
@@ -38,12 +38,6 @@ export interface IConnectionParams {
 	user?: string;
 	password?: string;
 	application_name?: string;
-}
-
-class ConnectionParamsError extends Error {
-
-	public name = 'ConnectionParamsError';
-
 }
 
 export class ConnectionParams {
@@ -90,10 +84,7 @@ export class ConnectionParams {
 		});
 
 		if (missingParams.length) {
-			throw new ConnectionParamsError(
-				`Missing connection parameters: ${missingParams.join(', ')}. Connection parameters can be read 
-        from environment only if Deno is run with env permission (deno run --allow-env)`
-			);
+			throw new ConnectionParamsError(`Missing connection parameters: ${missingParams.join(', ')}.`);
 		}
 	}
 

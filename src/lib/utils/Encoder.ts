@@ -46,34 +46,37 @@ function escapeArrayElement(value: unknown): string {
 	return `"${escapedValue}"`;
 }
 
-function encodeArray(array: Array<unknown>): string {
-	let encodedArray = '{';
+function encodeArray(array: readonly unknown[]): string {
+	if (array.length === 0) return '{}';
 
-	array.forEach((element, index) => {
-		if (index > 0) {
-			encodedArray += ',';
-		}
+	let encodedArray = '';
+	const { length } = array;
+	for (let i = 0; i < length; ++i) {
+		encodedArray += i > 0
+			? `,${encodeArrayElement(array[i])}`
+			: encodeArrayElement(array[i]);
+	}
 
-		if (element === null || typeof element === 'undefined') {
-			encodedArray += 'NULL';
-		} else if (Array.isArray(element)) {
-			encodedArray += encodeArray(element);
-		} else if (element instanceof Uint8Array) {
-			// TODO: it should be encoded as bytea?
-			throw new Error("Can't encode array of buffers.");
-		} else {
-			const encodedElement = encode(element);
-			encodedArray += escapeArrayElement(encodedElement as string);
-		}
-	});
+	return `{${encodedArray}}`;
+}
 
-	encodedArray += '}';
-	return encodedArray;
+function encodeArrayElement(element: unknown) {
+	if (element === null || typeof element === 'undefined') {
+		return 'NULL';
+	} else if (Array.isArray(element)) {
+		return encodeArray(element);
+	} else if (element instanceof Uint8Array) {
+		// TODO: it should be encoded as bytea?
+		throw new Error("Can't encode array of buffers.");
+	} else {
+		const encodedElement = encode(element);
+		return escapeArrayElement(encodedElement as string);
+	}
 }
 
 function encodeBytes(value: Uint8Array): string {
 	const hex = Array.from(value)
-		.map(val => (val < 10 ? `0${val.toString(16)}` : val.toString(16)))
+		.map(val => (val < 10 ? `0${val.toString(10)}` : val.toString(16)))
 		.join('');
 	return `\\x${hex}`;
 }

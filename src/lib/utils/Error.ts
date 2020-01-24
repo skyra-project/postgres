@@ -1,4 +1,4 @@
-import { Message } from './connection';
+import { Message } from '../connection/Message';
 
 export interface ErrorFields {
 	severity: string;
@@ -18,6 +18,12 @@ export interface ErrorFields {
 	file?: string;
 	line?: string;
 	routine?: string;
+}
+
+export class ConnectionParamsError extends Error {
+
+	public name = 'ConnectionParamsError';
+
 }
 
 export class PostgresError extends Error {

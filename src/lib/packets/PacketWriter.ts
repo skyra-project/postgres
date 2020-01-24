@@ -25,7 +25,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { copyBytes } from './utils';
+import { copyBytes } from '../utils/Util';
 import { TextEncoder } from 'util';
 
 export class PacketWriter {
@@ -36,8 +36,8 @@ export class PacketWriter {
 	private headerPosition: number;
 	private encoder = new TextEncoder();
 
-	public constructor(size?: number) {
-		this.size = size || 1024;
+	public constructor(size = 1024) {
+		this.size = size;
 		this.buffer = new Uint8Array(this.size + 5);
 		this.offset = 5;
 		this.headerPosition = 0;

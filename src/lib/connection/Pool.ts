@@ -1,13 +1,14 @@
-import { PoolClient } from './client';
-import { Connection } from './connection';
-import { ConnectionParams, IConnectionParams } from './connection_params';
-import { Query, QueryConfig, QueryResult } from './query';
-import { DeferredStack } from './deferred';
+import { ConnectionParams, IConnectionParams } from './ConnectionParameters';
+import { Connection } from './Connection';
+import { PoolClient } from '../clients/PoolClient';
+import { QueryConfig, Query } from '../queries/Query';
+import { QueryResult } from '../queries/QueryResult';
+import { DeferredStack } from '../utils/DeferredStack';
 
 export class Pool {
 
 	private _connectionParams: ConnectionParams;
-	private _connections!: Array<Connection>;
+	private _connections!: Connection[];
 	private _availableConnections!: DeferredStack<Connection>;
 	private _maxSize: number;
 	private _ready: Promise<void>;

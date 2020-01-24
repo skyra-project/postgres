@@ -1,3 +1,3 @@
-export { Client } from './lib/client';
-export { PostgresError } from './lib/error';
-export { Pool } from './lib/pool';
+export { Client } from './lib/clients/Client';
+export { PostgresError } from './lib/utils/Error';
+export { Pool } from './lib/connection/Pool';

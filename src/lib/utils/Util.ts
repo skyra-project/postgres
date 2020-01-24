@@ -1,4 +1,4 @@
-import { TextEncoder } from 'util';
+import { TextEncoder, promisify } from 'util';
 import { createHash } from 'crypto';
 import { URL } from 'url';
 
@@ -18,9 +18,9 @@ export function readInt32BE(buffer: Uint8Array, offset: number): number {
 
 	return (
 		(buffer[offset] << 24)
-    | (buffer[offset + 1] << 16)
-    | (buffer[offset + 2] << 8)
-    | buffer[offset + 3]
+		| (buffer[offset + 1] << 16)
+		| (buffer[offset + 2] << 8)
+		| buffer[offset + 3]
 	);
 }
 
@@ -28,9 +28,9 @@ export function readUInt32BE(buffer: Uint8Array, offset: number): number {
 	offset >>>= 0;
 
 	return ((buffer[offset] * 0x1000000) +
-    ((buffer[offset + 1] << 16)
-      | (buffer[offset + 2] << 8)
-      | buffer[offset + 3])
+		((buffer[offset + 1] << 16)
+			| (buffer[offset + 2] << 8)
+			| buffer[offset + 3])
 	);
 }
 
@@ -45,11 +45,7 @@ function md5(bytes: Uint8Array): string {
 // The actual PasswordMessage can be computed in SQL as:
 //  concat('md5', md5(concat(md5(concat(password, username)), random-salt))).
 // (Keep in mind the md5() function returns its result as a hex string.)
-export function hashMd5Password(
-	username: string,
-	password: string,
-	salt: Uint8Array
-): string {
+export function hashMd5Password(username: string, password: string, salt: Uint8Array): string {
 	const innerHash = md5(encoder.encode(password + username));
 	const innerBytes = encoder.encode(innerHash);
 	const outerBuffer = new Uint8Array(innerBytes.length + salt.length);
@@ -87,15 +83,13 @@ export function parseDsn(dsn: string): DsnResult {
 	};
 }
 
-export function delay<T>(ms: number, value?: T): Promise<T> {
-	return new Promise<T>(resolve => setTimeout(() => resolve(value), ms));
-}
+export const delay = promisify(setTimeout);
 
 export function copyBytes(dst: Uint8Array, src: Uint8Array, off = 0): number {
 	off = Math.max(0, Math.min(off, dst.byteLength));
 	const r = dst.byteLength - off;
 	if (src.byteLength > r) {
-	  src = src.subarray(0, r);
+		src = src.subarray(0, r);
 	}
 	dst.set(src, off);
 	return src.byteLength;

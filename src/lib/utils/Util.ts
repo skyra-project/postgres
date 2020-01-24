@@ -16,8 +16,7 @@ export function readUInt16BE(buffer: Uint8Array, offset: number): number {
 export function readInt32BE(buffer: Uint8Array, offset: number): number {
 	offset >>>= 0;
 
-	return (
-		(buffer[offset] << 24)
+	return ((buffer[offset] << 24)
 		| (buffer[offset + 1] << 16)
 		| (buffer[offset + 2] << 8)
 		| buffer[offset + 3]
@@ -27,10 +26,9 @@ export function readInt32BE(buffer: Uint8Array, offset: number): number {
 export function readUInt32BE(buffer: Uint8Array, offset: number): number {
 	offset >>>= 0;
 
-	return ((buffer[offset] * 0x1000000) +
-		((buffer[offset + 1] << 16)
-			| (buffer[offset + 2] << 8)
-			| buffer[offset + 3])
+	return ((buffer[offset] * 0x1000000) + ((buffer[offset + 1] << 16)
+		| (buffer[offset + 2] << 8)
+		| buffer[offset + 3])
 	);
 }
 
